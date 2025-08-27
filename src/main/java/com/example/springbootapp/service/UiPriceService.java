@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.springbootapp.dto.NightlySimpleRow;
@@ -13,19 +12,14 @@ import com.example.springbootapp.entity.PriceSnapshot;
 import com.example.springbootapp.repository.ExternalHotelRepo;
 import com.example.springbootapp.repository.PriceSnapshotRepo;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class UiPriceService {
 
-    @Autowired
     private final PriceSnapshotRepo snapshots;
-    
-    @Autowired
     private final ExternalHotelRepo hotels;
-
-    public UiPriceService(PriceSnapshotRepo snapshots, ExternalHotelRepo hotels) {
-        this.snapshots = snapshots;
-        this.hotels = hotels;
-    }
 
     public PriceRow singleDay(String provider, String hotelId, LocalDate date) {
         var out = date.plusDays(1);

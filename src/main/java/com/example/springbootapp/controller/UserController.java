@@ -32,7 +32,8 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UserRepository users = null;
+    @Autowired
+    private UserRepository users;
 
     @Autowired
     private UserService userService;
