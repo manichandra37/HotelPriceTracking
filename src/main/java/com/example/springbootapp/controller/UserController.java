@@ -3,7 +3,6 @@ package com.example.springbootapp.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,17 +26,25 @@ import com.example.springbootapp.util.UserMapper;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
+/**
+ * Controller for user management operations including CRUD operations and authentication.
+ */
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserRepository users;
+    private final UserRepository users;
+    private final UserService userService;
 
-    @Autowired
-    private UserService userService;
-    
+    // ==================== USER CRUD OPERATIONS ====================
+
+    /**
+     * Get all users.
+     * GET /api/users
+     */
     @GetMapping
     public ResponseEntity<List<UserDto>> getAllUsers() {
         List<User> users = userService.getAllUsers();
@@ -46,7 +53,11 @@ public class UserController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(userDtos);
     }
-    
+
+    /**
+     * Get user by ID.
+     * GET /api/users/{id}
+     */
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
@@ -55,27 +66,39 @@ public class UserController {
         }
         return ResponseEntity.notFound().build();
     }
-    
+
+    /**
+     * Create a new user.
+     * POST /api/users
+     */
     @PostMapping
     public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserDto userDto) {
         User user = convertToEntity(userDto);
         User savedUser = userService.saveUser(user);
         return new ResponseEntity<>(convertToDto(savedUser), HttpStatus.CREATED);
     }
-    
+
+    /**
+     * Update an existing user.
+     * PUT /api/users/{id}
+     */
     @PutMapping("/{id}")
     public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @Valid @RequestBody UserDto userDto) {
         User existingUser = userService.getUserById(id);
         if (existingUser == null) {
             return ResponseEntity.notFound().build();
         }
-        
+
         existingUser.setName(userDto.getName());
         existingUser.setEmail(userDto.getEmail());
         User updatedUser = userService.saveUser(existingUser);
         return ResponseEntity.ok(convertToDto(updatedUser));
     }
-    
+
+    /**
+     * Delete a user.
+     * DELETE /api/users/{id}
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         User user = userService.getUserById(id);
@@ -86,40 +109,56 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/auth/signup")
-public UserResponse signup(@RequestBody @Valid SignupRequest req) {
-    if (users.existsByEmail(req.email())) {
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email exists");
-    }
-    String hash = BCrypt.withDefaults().hashToString(12, req.password().toCharArray());
-    User u = User.builder()
-            .name(req.name())
-            .email(req.email())
-            .phone(req.phone())
-            .passwordHash(hash)
-            .status(UserStatus.PENDING)
-            .build();
-    users.save(u);
-    return UserMapper.toResponse(u);
-}
+    // ==================== AUTHENTICATION ====================
 
+    /**
+     * User signup endpoint.
+     * POST /api/users/auth/signup
+     */
+    @PostMapping("/auth/signup")
+    public UserResponse signup(@RequestBody @Valid SignupRequest req) {
+        if (users.existsByEmail(req.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email exists");
+        }
+        String hash = BCrypt.withDefaults().hashToString(12, req.password().toCharArray());
+        User u = User.builder()
+                .name(req.name())
+                .email(req.email())
+                .phone(req.phone())
+                .passwordHash(hash)
+                .status(UserStatus.PENDING)
+                .build();
+        users.save(u);
+        return UserMapper.toResponse(u);
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    /**
+     * Verify admin authentication using admin key.
+     */
     private void requireAdmin(String key) {
         String expected = System.getenv().getOrDefault("ADMIN_KEY", "dev-admin-key");
         if (!expected.equals(key)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not admin");
         }
     }
-    
-    // Helper methods for conversion
+
+    /**
+     * Convert User entity to UserDto.
+     */
     private UserDto convertToDto(User user) {
         return new UserDto(user.getId(), user.getName(), user.getEmail());
     }
-    
-   private User convertToEntity(UserDto userDto) {
-       return User.builder()
-               .name(userDto.getName())
-               .email(userDto.getEmail())
-               .status(UserStatus.PENDING)
-               .build();
-   }
+
+    /**
+     * Convert UserDto to User entity.
+     */
+    private User convertToEntity(UserDto userDto) {
+        return User.builder()
+                .name(userDto.getName())
+                .email(userDto.getEmail())
+                .status(UserStatus.PENDING)
+                .build();
+    }
 }

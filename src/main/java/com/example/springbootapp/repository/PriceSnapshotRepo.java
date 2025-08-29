@@ -3,6 +3,7 @@ package com.example.springbootapp.repository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -35,4 +36,13 @@ public interface PriceSnapshotRepo extends JpaRepository<PriceSnapshot, Long>{
       LocalDate checkinFrom,
       LocalDate checkoutTo
   );
+
+  // pick latest snapshot for a hotel & night
+Optional<PriceSnapshot>
+findTopByProviderAndExternalHotelIdAndCheckinDateAndCheckoutDateOrderByFetchedAtDesc(
+    String provider,
+    String externalHotelId,
+    LocalDate checkin,
+    LocalDate checkout
+);
 }

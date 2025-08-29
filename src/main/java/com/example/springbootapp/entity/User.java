@@ -14,11 +14,16 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * User entity representing application users.
+ * Stores user authentication and profile information.
+ */
 @Entity
 @Table(name = "users")
 @Data
@@ -26,21 +31,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class User {
-    
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank @Column(nullable = false)
+    @NotBlank
+    @Column(nullable = false)
     private String name;
 
-    @Email @NotBlank
+    @Email
+    @NotBlank
     @Column(unique = true, nullable = false)
     private String email;
 
-    // ✅ add these:
     @NotBlank
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;  // store a hash (e.g., BCrypt), not the raw password
+    private String passwordHash;  // Store a hash (e.g., BCrypt), not the raw password
 
     @Column(length = 30)
     private String phone;
@@ -48,7 +55,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private UserStatus status = UserStatus.PENDING;  // default PENDING on signup
+    private UserStatus status = UserStatus.PENDING;  // Default PENDING on signup
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -56,16 +63,29 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // ==================== JPA LIFECYCLE METHODS ====================
+
     @PrePersist
-    void onCreate() { createdAt = LocalDateTime.now(); updatedAt = createdAt; }
+    void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = createdAt;
+    }
 
     @PreUpdate
-    void onUpdate() { updatedAt = LocalDateTime.now(); }
-    
-    // Constructor with fields
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
+    // ==================== CONSTRUCTORS ====================
+
+    /**
+     * Constructor with name and email.
+     * 
+     * @param name User's name
+     * @param email User's email address
+     */
     public User(String name, String email) {
         this.name = name;
         this.email = email;
     }
-    }
+}

@@ -7,7 +7,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import com.example.springbootapp.dto.BookingApiResponse;
 import com.example.springbootapp.entity.PriceSnapshot;
 import com.example.springbootapp.repository.PriceSnapshotRepo;
 import com.example.springbootapp.util.BookingApiClient;
@@ -21,7 +23,9 @@ import lombok.RequiredArgsConstructor;
 public class BookingFetchService {
     private final BookingApiClient api;
     private final PricingIngestService ingest;
+    private final WebClient bookingWebClient; // define a WebClient bean in config
     private final PriceSnapshotRepo snapshots;
+
 
     /** Fetch one stay (checkin→checkout) from RapidAPI and save */
     public void fetchAndSave(String hotelId, LocalDate checkin, LocalDate checkout) {
@@ -81,5 +85,38 @@ public class BookingFetchService {
         try { Thread.sleep(Math.min(2000L * attempts, 5000L)); } catch (InterruptedException ignored) {}
       }
     }
+  }
+
+  public void fetchSingle(String externalHotelId, LocalDate checkin, LocalDate checkout) {
+    // build RapidAPI URL
+    String url = "/api/v1/hotels/getHotelDetails"
+            + "?hotel_id=" + externalHotelId
+            + "&arrival_date=" + checkin
+            + "&departure_date=" + checkout
+            + "&adults=1&room_qty=1&units=metric&temperature_unit=c"
+            + "&languagecode=en-us&currency_code=USD";
+
+            var response = bookingWebClient.get()
+            .uri(url)
+            .retrieve()
+            .bodyToMono(BookingApiResponse.class)  // ✅ now compiles
+            .block();
+    
+    if (response != null && response.data() != null) {
+        var d = response.data();
+    
+        PriceSnapshot snap = PriceSnapshot.builder()
+                .provider("RAPIDAPI_BOOKING")
+                .externalHotelId(externalHotelId)
+                .checkinDate(checkin)
+                .checkoutDate(checkout)
+                .currency(d.product_price_breakdown().gross_amount().currency())
+                .priceTotal(d.product_price_breakdown().gross_amount().value())
+                .availability(d.available_rooms() > 0 ? "AVAILABLE" : "SOLD_OUT")
+                .fetchedAt(Instant.now())
+                .build();
+    
+        snapshots.save(snap);
+}
   }
 }

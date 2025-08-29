@@ -1,6 +1,5 @@
 package com.example.springbootapp.dto;
 
-import lombok.Data;
 
 public record UserResponse(
         Long id,
